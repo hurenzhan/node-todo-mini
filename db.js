@@ -11,7 +11,7 @@ const db = {
                 if (error) return reject(error)
                 let list;
                 try {
-                    JSON.parse(data?.toString());
+                    list = JSON.parse(data?.toString());
                 } catch (parseError) {
                     list = [];
                 }
