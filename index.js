@@ -5,7 +5,7 @@ module.exports.add = async (title) => {
     // 读取之前的任务
     const list = await db.read();
     // 往里面添加一个title任务
-    list.push({title, done: false})
+    list.push({title, done: 0})
     // 储存任务到文件
     await db.write(list);
 }
@@ -14,43 +14,65 @@ module.exports.clear = async () => {
     await db.write([])
 }
 
-function markAsDone(list, index) {
-    list[index].done = true
-    db.write(list)
+async function markAsCancel(list, index) {
+    list[index].done = '0'
+    await db.write(list)
+    printTasks(list);
 }
 
-function markAsUndone(list, index) {
-    list[index].done = false;
-    db.write(list)
+async function markAsOn(list, index) {
+    list[index].done = '1'
+    await db.write(list)
+    printTasks(list);
 }
 
-function updateTitle(list, index) {
+async function markAsDone(list, index) {
+    list[index].done = '2'
+    await db.write(list)
+    printTasks(list);
+}
+
+async function markAsUndone(list, index) {
+    list[index].done = '3';
+    await db.write(list)
+    printTasks(list);
+}
+
+async function updateTitle(list, index) {
     inquirer.prompt({
         type: 'input',
         name: 'title',
         message: '新的标题',
         default: list[index].title
-    }).then(answer => {
+    }).then(async answer => {
         list[index].title = answer.title
-        db.write(list);
+        await db.write(list)
+        printTasks(list);
     })
 }
 
-function remove(list, index) {
+async function remove(list, index) {
     list.splice(index, 1)
-    db.write(list)
+    await db.write(list)
+    printTasks(list);
+}
+
+async function goBack(list) {
+    printTasks(list);
 }
 
 function askForAction(list, index) {
-    const actions = {markAsUndone, markAsDone, remove, updateTitle}
+    const actions = {markAsUndone, markAsOn, markAsDone, markAsCancel, remove, updateTitle, goBack}
     inquirer.prompt({
         type: 'list',
         name: 'action',
         message: '请选择操作',
         choices: [
-            {name: '退出', value: 'quit'},
+            {name: '上一步', value: 'goBack'},
             {name: '已完成', value: 'markAsDone'},
+            {name: '进行中', value: 'markAsOn'},
             {name: '未完成', value: 'markAsUndone'},
+            {name: '取消', value: 'markAsCancel'},
             {name: '改标题', value: 'updateTitle'},
             {name: '删除', value: 'remove'},
         ]
@@ -65,13 +87,24 @@ function askForCreateTask(list) {
         type: 'index',
         name: 'title',
         message: '请输入任务标题'
-    }).then(answer => {
+    }).then(async answer => {
         list.push({
             title: answer.title,
-            done: false
+            done: '0'
         })
-        db.write(list);
+        await db.write(list);
+        printTasks(list);
     })
+}
+
+function getStatusIcon(done) {
+    const icons = {
+        0: '[ ]',
+        1: '[□]',
+        2: '[√]',
+        3: '[x]',
+    }
+    return icons[done]
 }
 
 function printTasks(list) {
@@ -84,7 +117,7 @@ function printTasks(list) {
                 {name: '退出', value: '-1'},
                 ...list.map((task, index) => (
                     {
-                        name: `${task.done ? '[x]' : '[_]'} ${index + 1} - ${task.title}`,
+                        name: `${getStatusIcon(task.done)} ${index + 1} - ${task.title}`,
                         value: index.toString()
                     }
                 )),
