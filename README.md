@@ -1,1 +1,3 @@
-# node-todo-mini
+# renren-node-todo
+
+![](./todo.gif)
